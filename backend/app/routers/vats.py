@@ -10,6 +10,7 @@ from app.models.dye_house import DyeHouse
 from app.models.user import User
 from app.models.vat import Vat
 from app.schemas.vat import VatCreate, VatUpdate, VatOut
+from app.services.temp_chain import evaluate_temp_chain
 
 router = APIRouter(prefix="/api/vats", tags=["vats"])
 
@@ -79,6 +80,11 @@ def update_vat(
         house = db.query(DyeHouse).filter(DyeHouse.id == data["dye_house_id"]).first()
         if not house:
             raise HTTPException(status_code=400, detail="染坊不存在")
+    if data.get("status") == "drain" and item.status != "drain":
+        # 直接改状态排液同样走收染链判定
+        ok, reason = evaluate_temp_chain(db, item)
+        if not ok:
+            raise HTTPException(status_code=409, detail=f"未完成收染，禁止排液：{reason}")
     for k, v in data.items():
         setattr(item, k, v)
     try:
@@ -90,18 +96,42 @@ def update_vat(
     return item
 
 
+@router.post("/{vat_id}/finish", response_model=VatOut)
+def finish_vat(
+    vat_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """收染：缸温链完整才允许收染，成功后将染缸置为排液。"""
+    item = db.query(Vat).filter(Vat.id == vat_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="染缸不存在")
+    if item.status == "drain":
+        raise HTTPException(status_code=400, detail="染缸已排液，无需重复收染")
+    ok, reason = evaluate_temp_chain(db, item)
+    if not ok:
+        raise HTTPException(status_code=409, detail=f"缸温链不完整，禁止收染：{reason}")
+    item.status = "drain"
+    db.commit()
+    db.refresh(item)
+    return item
+
+
 @router.post("/{vat_id}/drain", response_model=VatOut)
 def drain_vat(
     vat_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """可选：完成排液，将染缸状态置为 drain。"""
+    """排液：未收染（缸温链不完整）前禁止排液。判定与收染共用。"""
     item = db.query(Vat).filter(Vat.id == vat_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="染缸不存在")
     if item.status == "drain":
         raise HTTPException(status_code=400, detail="染缸已在排液状态")
+    ok, reason = evaluate_temp_chain(db, item)
+    if not ok:
+        raise HTTPException(status_code=409, detail=f"未完成收染，禁止排液：{reason}")
     item.status = "drain"
     db.commit()
     db.refresh(item)

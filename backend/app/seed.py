@@ -5,6 +5,7 @@ from app.database import SessionLocal
 from app.models.dye_house import DyeHouse
 from app.models.dye_lot import DyeLot
 from app.models.fastness_check import FastnessCheck
+from app.models.temp_sample import TempSample
 from app.models.user import User
 from app.models.vat import Vat
 
@@ -114,6 +115,26 @@ def seed() -> None:
                         rub_fastness=4.0,
                         temp_c=37.0,
                         notes=None,
+                    ),
+                ]
+            )
+            # V-01 正在染程中：挂两点缸温（相邻温差 3℃，且晚于染程开始），
+            # 但不足三点，链不完整，演示“不可收染/不可排液”
+            db.add_all(
+                [
+                    TempSample(
+                        vat_id=v1.id,
+                        seq=1,
+                        temp_c=58.0,
+                        sampled_at=now - timedelta(minutes=40),
+                        recorder_name="染程操作员",
+                    ),
+                    TempSample(
+                        vat_id=v1.id,
+                        seq=2,
+                        temp_c=61.0,
+                        sampled_at=now - timedelta(minutes=10),
+                        recorder_name="染程操作员",
                     ),
                 ]
             )

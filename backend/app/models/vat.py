@@ -1,6 +1,7 @@
 from typing import List, TYPE_CHECKING
 
 from sqlalchemy import String, Integer, Float, ForeignKey, UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -8,6 +9,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.dye_house import DyeHouse
     from app.models.dye_lot import DyeLot
+    from app.models.temp_sample import TempSample
 
 
 class Vat(Base):
@@ -25,3 +27,14 @@ class Vat(Base):
     dye_lots: Mapped[List["DyeLot"]] = relationship(
         "DyeLot", back_populates="vat", cascade="all, delete-orphan"
     )
+    temp_samples: Mapped[List["TempSample"]] = relationship(
+        "TempSample",
+        back_populates="vat",
+        cascade="all, delete-orphan",
+        order_by="TempSample.seq",
+    )
+
+    @hybrid_property
+    def sample_count(self) -> int:
+        """该缸已登记的缸温采样点数。"""
+        return len(self.temp_samples)

@@ -34,3 +34,4 @@ class VatOut(BaseModel):
     fiber_type: str = Field(serialization_alias="fiberType")
     capacity_l: float = Field(serialization_alias="capacityL")
     status: VatStatus
+    sample_count: int = Field(0, serialization_alias="sampleCount")

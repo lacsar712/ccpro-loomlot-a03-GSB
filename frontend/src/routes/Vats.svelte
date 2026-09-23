@@ -70,6 +70,16 @@
     };
   }
 
+  async function finish(id) {
+    error = '';
+    try {
+      await api(`/vats/${id}/finish`, { method: 'POST' });
+      await load();
+    } catch (e) {
+      error = e.message;
+    }
+  }
+
   async function drain(id) {
     error = '';
     try {
@@ -93,7 +103,7 @@
 </script>
 
 <h1 class="page-title">染缸</h1>
-<p class="page-sub">状态：就绪 / 染色中 / 排液。容量单位为升。</p>
+<p class="page-sub">状态：就绪 / 染色中 / 排液。容量单位为升。染程中缸须完成缸温链方可收染，未收染禁止排液。</p>
 
 <div class="panel" style="margin-bottom:1rem;">
   <div class="form-grid">
@@ -142,6 +152,7 @@
         <th>纤维</th>
         <th>容量 L</th>
         <th>状态</th>
+        <th>采样点数</th>
         <th></th>
       </tr>
     </thead>
@@ -154,9 +165,13 @@
           <td>{row.fiberType}</td>
           <td>{row.capacityL}</td>
           <td><span class="badge {row.status}">{VAT_STATUS[row.status] || row.status}</span></td>
+          <td>{row.sampleCount ?? 0}</td>
           <td class="row-actions">
+            {#if row.status === 'dyeing'}
+              <button class="btn small" type="button" on:click={() => finish(row.id)}>收染</button>
+            {/if}
             {#if row.status !== 'drain'}
-              <button class="btn ghost small" type="button" on:click={() => drain(row.id)}>完成排液</button>
+              <button class="btn ghost small" type="button" on:click={() => drain(row.id)}>排液</button>
             {/if}
             <button class="btn ghost small" type="button" on:click={() => startEdit(row)}>编辑</button>
             <button class="btn danger small" type="button" on:click={() => remove(row.id)}>删除</button>
