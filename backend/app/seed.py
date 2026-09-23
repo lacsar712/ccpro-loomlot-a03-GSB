@@ -7,6 +7,7 @@ from app.models.dye_lot import DyeLot
 from app.models.fastness_check import FastnessCheck
 from app.models.user import User
 from app.models.vat import Vat
+from app.models.vat_temp_sample import VatTempSample
 
 
 def seed() -> None:
@@ -97,6 +98,25 @@ def seed() -> None:
             # lot2 was on ready vat historically — keep v3 ready for demo create path
             # Re-set: creating lot2 would have set dyeing; for seed we leave one dyeing + one ready
             v3.status = "ready"
+            # 缸温采样链：v1 仅两点（< 3 个连续序号），不满足收染条件
+            db.add_all(
+                [
+                    VatTempSample(
+                        vat_id=v1.id,
+                        seq=1,
+                        temp_c=38.0,
+                        sampled_at=now - timedelta(hours=5),
+                        recorder_name="染程操作员",
+                    ),
+                    VatTempSample(
+                        vat_id=v1.id,
+                        seq=2,
+                        temp_c=41.5,
+                        sampled_at=now - timedelta(hours=3),
+                        recorder_name="染程操作员",
+                    ),
+                ]
+            )
             db.add_all(
                 [
                     FastnessCheck(

@@ -1,6 +1,6 @@
 # LoomLot-01 · 染坊缸染与色牢度抽检
 
-靛蓝染坊台：按 **染坊 → 染缸 → 染程 → 色牢度** 工序推进，聚焦缸染调度与抽检，不是库存出入库系统。
+靛蓝染坊台：按 **染坊 → 染缸 → 染程 → 缸温链 → 色牢度** 工序推进，聚焦缸染调度与抽检，不是库存出入库系统。
 
 ## 技术栈
 
@@ -48,24 +48,31 @@ docker compose down
 ## 业务实体
 
 1. **DyeHouse** — `name`, `waterNote`, `notes`
-2. **Vat** — `dyeHouseId`, `vatCode`, `fiberType`, `capacityL`, `status` ∈ `ready|dyeing|drain`
+2. **Vat** — `dyeHouseId`, `vatCode`, `fiberType`, `capacityL`, `status` ∈ `ready|dyeing|drain`，列表带 `sampleCount`（缸温采样点数）
 3. **DyeLot** — `vatId`, `recipeName`, `fabricKg`, `startedAt`, `operatorName`
 4. **FastnessCheck** — `dyeLotId`, `checkedAt`, `washFastness`(1–5), `rubFastness`(>0), `tempC`, `notes`
+5. **VatTempSample** — `vatId`, `seq`(序号，从 1 起，同缸唯一), `tempC`(缸温℃), `sampledAt`(采样时刻), `recorderName`(记录人)
 
 ### 规则
 
 - 仅当染缸状态为 `ready` 或 `dyeing` 时可新建染程，否则 409
 - 新建染程后，染缸状态自动设为 `dyeing`
-- 可选接口：`POST /api/vats/{id}/drain` 将染缸置为 `drain`
+- 仅 `dyeing` 染缸可登记缸温采样；`ready` / `drain` 登记返回 409
+- **收染**（`POST /api/vats/{id}/finish`）要求缸温采样链闭合，任一不满足返回 409：
+  1. 该缸至少 **3 个序号连续** 的采样（取最长连续序号段）；
+  2. **温差规则**：连续链内相邻采样缸温差的绝对值 ≤ **8℃**；
+  3. 最新采样时刻晚于该缸最新染程开始时刻。
+- 收染成功后染缸置为 `drain`；未收染前禁止排液——`POST /api/vats/{id}/drain` 与收染**共用同一采样链判定**，链未闭合同样 409
 
 ## 主要 API
 
 - `POST /api/auth/login`（OAuth2 表单）
 - `GET /api/auth/me`
 - `GET/POST/PUT/DELETE /api/dye-houses`
-- `GET/POST/PUT/DELETE /api/vats` · `POST /api/vats/{id}/drain`
+- `GET/POST/PUT/DELETE /api/vats` · `POST /api/vats/{id}/finish`（收染）· `POST /api/vats/{id}/drain`（排液，与收染共用采样链判定）
 - `GET/POST/PUT/DELETE /api/dye-lots`
 - `GET/POST/PUT/DELETE /api/fastness-checks`
+- `GET/POST/PUT/DELETE /api/vat-temp-samples`（缸温采样链）
 - `GET /api/dashboard/stats`
 
 除登录外需 `Authorization: Bearer <token>`。字段对外为 camelCase。

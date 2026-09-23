@@ -16,7 +16,7 @@
 </script>
 
 <h1 class="page-title">工艺总览</h1>
-<p class="page-sub">按染坊 → 染缸 → 染程 → 色牢度推进；顶部步骤条可跳转各工序。</p>
+<p class="page-sub">按染坊 → 染缸 → 染程 → 缸温链 → 色牢度推进；顶部步骤条可跳转各工序。</p>
 
 {#if error}
   <p class="err">{error}</p>
@@ -49,12 +49,13 @@
 
 <div class="panel">
   <p style="margin:0 0 0.75rem;color:var(--indigo-mist);font-size:0.9rem;">
-    业务约束：仅当染缸为 <strong>ready</strong> 或 <strong>dyeing</strong> 时可新建染程；新建后染缸自动变为 dyeing。排液可用染缸「完成排液」动作。
+    业务约束：仅当染缸为 <strong>ready</strong> 或 <strong>dyeing</strong> 时可新建染程；新建后染缸自动变为 dyeing。染色中登记缸温采样，收染与排液均要求采样链闭合：≥3 个连续序号、相邻缸温差 ≤8℃、最新采样晚于最新染程开始。
   </p>
   <div class="toolbar">
     <a class="btn" href="/houses" use:link>进入染坊</a>
     <a class="btn ghost" href="/vats" use:link>管理染缸</a>
     <a class="btn ghost" href="/lots" use:link>登记染程</a>
+    <a class="btn ghost" href="/samples" use:link>缸温采样</a>
     <a class="btn ghost" href="/checks" use:link>色牢度抽检</a>
   </div>
 </div>
